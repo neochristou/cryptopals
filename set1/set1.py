@@ -45,7 +45,7 @@ def xor_hex(hexstring1, hexstring2):
     return '{:x}'.format(hex1 ^ hex2)
 
 def single_byte_xor(hexstring, threshold):
-    # dictionary = enchant.Dict("en_US")
+    dictionary = enchant.Dict("en_US")
     hexnum = bytes.fromhex(hexstring)
     string_scores = {}
     for i in range(256):
@@ -62,8 +62,8 @@ def single_byte_xor(hexstring, threshold):
                         score += letterFrequency.get(c.upper())
                     else:
                         score -= 5
-                # if word.isprintable() and dictionary.check(word) and len(word) > 1:
-                #     score += 1
+                if word.isprintable() and dictionary.check(word) and len(word) > 1:
+                    score += 10
             if score > threshold:
                 string_scores[xored_str] = score
         except (UnicodeDecodeError, AttributeError):
@@ -135,9 +135,9 @@ if __name__ == '__main__':
     # print(encrypted)
 
     # Challenge 4
-    # enc_file = open('4.txt', 'r')
-    # lines = enc_file.read().splitlines()
-    # print(find_xored_single_byte(lines, 100))
+    enc_file = open('4.txt', 'r')
+    lines = enc_file.read().splitlines()
+    print(find_xored_single_byte(lines, 100))
 
     # Challenge 3
     # print(single_byte_xor('1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736', 100))
