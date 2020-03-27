@@ -44,7 +44,7 @@ def xor_hex(hexstring1, hexstring2):
     hex2 = int(hexstring2, 16)
     return '{:x}'.format(hex1 ^ hex2)
 
-def single_byte_xor(hexstring, threshold):
+def single_byte_xor(hexstring, threshold, get_key = False):
     dictionary = enchant.Dict("en_US")
     hexnum = bytes.fromhex(hexstring)
     string_scores = {}
@@ -68,8 +68,11 @@ def single_byte_xor(hexstring, threshold):
                 string_scores[xored_str] = score
         except (UnicodeDecodeError, AttributeError):
             pass
+    sorted_scores = sorted(string_scores, key=string_scores.get, reverse=True)
+    if get_key:
+        return ord(sorted_scores[0][0]) ^ hexnum[0]
     final_list = ""
-    final_list = '\n'.join(("[score: " + str(string_scores[sentence]) + "] " + sentence) for sentence in sorted(string_scores, key=string_scores.get, reverse=True))
+    final_list = '\n'.join(("[score: " + str(string_scores[sentence]) + "] " + sentence) for sentence in sorted_scores)
     return final_list
 
 def find_xored_single_byte(lines, threshold):
@@ -92,24 +95,50 @@ def encrypt_repeating_xor(plaintext, key):
         ciphertext += bytes([plaintext_bytes[i] ^ keystream_bytes[i]])
     return ciphertext.hex()
 
-def decrypt_repeating_xor(ciphertext_hex):
+def decrypt_repeating_xor(ciphertext_hex, log_info=False):
     ciphertext = bytearray.fromhex(ciphertext_hex).decode('utf-8')
     min_dist = 100
     min_keysize = 100
     for keysize in range(2,40,1):
         samples = list()
         distances = 0
-        for i in range(0, 4 * keysize, keysize):
+        blocks = len(ciphertext) // keysize
+        for i in range(0, keysize * blocks, keysize):
             samples.append(ciphertext[i:i+keysize])
-        for i in range(1,4,1):
+        for i in range(1,blocks - 1,1):
             distances += hamming(samples[0], samples[i])
-        avg_dist = (distances/3)/keysize
+        avg_dist = (distances/ blocks)/keysize
         if avg_dist < min_dist:
             min_dist = avg_dist
             min_keysize = keysize
-    #TODO
-
-
+    if log_info:
+        print("Key size:", min_keysize, " [ score:" ,avg_dist, "]")
+    blocks = {}
+    for i in range(min_keysize):
+        blocks[i] = []
+    excess = len(ciphertext) % min_keysize
+    for i in range(0,len(ciphertext) - excess, min_keysize):
+        for j in range(min_keysize):
+            (blocks[j]).append(ciphertext[i+j])
+    for i in range(0, excess):
+        blocks[i].append(ciphertext[-excess + i])
+    key = []
+    for i in range(min_keysize):
+        block_str = ''.join(c for c in blocks[i])
+        block_hex = bytearray(block_str, 'utf-8').hex()
+        key.append(single_byte_xor(block_hex, 100, True))
+    if log_info:
+        key_text = ""
+        for c in key:
+            key_text += chr(c)
+        print("Key: ", key_text)
+    plaintext = ""
+    for i in range(0,len(ciphertext) - excess, min_keysize):
+        for j in range(min_keysize):
+            plaintext += chr(ord(ciphertext[i+j]) ^ key[j])
+    for i in range(0, excess):
+            plaintext += chr(ord(ciphertext[-excess + i]) ^ key[i])
+    return plaintext 
 
 def hamming(str1, str2):
     if len(str1) != len(str2):
@@ -123,10 +152,11 @@ def hamming(str1, str2):
 
 if __name__ == '__main__':
     # Challenge 6
-    # enc_file = open('6.txt', 'r')
-    # enc_text = enc_file.read()
-    # enc_hex = base64_to_hex(enc_text)
-    # decrypt_repeating_xor(enc_hex)
+    enc_file = open('6.txt', 'r')
+    enc_text = enc_file.read()
+    enc_hex = base64_to_hex(enc_text)
+    plaintext = decrypt_repeating_xor(enc_hex, log_info=True)
+    print(plaintext)
 
     # Challenge 5
     # plaintext = "Burning 'em, if you ain't quick and nimble I go crazy when I hear a cymbal"
@@ -135,9 +165,9 @@ if __name__ == '__main__':
     # print(encrypted)
 
     # Challenge 4
-    enc_file = open('4.txt', 'r')
-    lines = enc_file.read().splitlines()
-    print(find_xored_single_byte(lines, 100))
+    # enc_file = open('4.txt', 'r')
+    # lines = enc_file.read().splitlines()
+    # print(find_xored_single_byte(lines, 100))
 
     # Challenge 3
     # print(single_byte_xor('1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736', 100))
