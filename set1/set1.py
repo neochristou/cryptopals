@@ -3,6 +3,7 @@ import codecs
 import base64
 import string
 import enchant
+from Crypto.Cipher import AES
 
 letterFrequency = {'E' : 12.0,
 'T' : 9.10,
@@ -150,13 +151,44 @@ def hamming(str1, str2):
         dist += (c1!=c2)
     return dist
 
+def decrypt_aes_ecb(ciphertext, key):
+    cipher = AES.new(key, AES.MODE_ECB)
+    return cipher.decrypt(ciphertext).decode('utf-8')
+
+def detect_aes_ecb(ciphertext):
+    block_list = []
+    block_dict = {}
+    for i in range(0, len(ciphertext), 32):
+        block = ciphertext[i:i+32]
+        block_list.append(block)
+        block_dict[block] = None
+    if len(block_list) == len(block_dict):
+        return False
+    else:
+        return True
+
 if __name__ == '__main__':
+    # Challenge 8
+    enc_file = open('8.txt', 'r')
+    lines = enc_file.read().splitlines()
+    for line in lines:
+        if (detect_aes_ecb(line)):
+            print("Detected AES ECB: ", line)
+
+    # Challenge 7
+    # enc_file = open('7.txt', 'r')
+    # enc_text = bytearray(enc_file.read(), 'utf-8')
+    # ciphertext = codecs.decode(enc_text, 'base64')
+    # key = b'YELLOW SUBMARINE'
+    # plaintext = decrypt_aes_ecb(ciphertext, key) 
+    # print(plaintext)
+
     # Challenge 6
-    enc_file = open('6.txt', 'r')
-    enc_text = enc_file.read()
-    enc_hex = base64_to_hex(enc_text)
-    plaintext = decrypt_repeating_xor(enc_hex, log_info=True)
-    print(plaintext)
+    # enc_file = open('6.txt', 'r')
+    # enc_text = enc_file.read()
+    # enc_hex = base64_to_hex(enc_text)
+    # plaintext = decrypt_repeating_xor(enc_hex, log_info=True)
+    # print(plaintext)
 
     # Challenge 5
     # plaintext = "Burning 'em, if you ain't quick and nimble I go crazy when I hear a cymbal"
