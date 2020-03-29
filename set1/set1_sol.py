@@ -48,7 +48,7 @@ def xor_bytes(bytes1: bytes, bytes2: bytes) -> bytes:
     xored = bytearray(bytes1)
     for i, b in enumerate(bytes2):
         xored[i] ^= b
-    return xored 
+    return bytes(xored)
 
 def xor_hex(hexstring1, hexstring2):
     if len(hexstring1) != len(hexstring2):
