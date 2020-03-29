@@ -13,29 +13,25 @@ def encrypt_aes_ecb(plaintext, key):
     return cipher.encrypt(plaintext)
 
 def decrypt_aes_cbc(ciphertext, key, iv):
-    plaintext = ""
+    plaintext = b""
     prev_cipher_block = iv 
     for i in range(0, len(ciphertext), 16):
         cipher_block = ciphertext[i:i+16]
         dec_block = decrypt_aes_ecb(cipher_block, key)
-        dec_block_bytes = bytearray(dec_block, 'utf-8')
-        prev_block_bytes = bytearray(prev_cipher_block, 'utf-8')
-        print(len(dec_block_bytes))
-        print(len(prev_cipher_block))
-        plain_block = xor_hex(dec_block_bytes.hex(), prev_block_bytes.hex())
+        plain_block = xor_bytes(dec_block, prev_cipher_block)
         prev_cipher_block = cipher_block
         plaintext += plain_block
     return plaintext
 
 if __name__ == '__main__':
     # Challenge 10
-    # enc_file = open('set2/10.txt', 'r')
-    # enc_text = bytearray(enc_file.read(), 'utf-8')
-    # ciphertext = codecs.decode(enc_text, 'base64')
-    # key = b'YELLOW SUBMARINE'
-    # iv = '\x00' * 16
-    # plaintext = decrypt_aes_cbc(ciphertext, key, iv) 
-    # print(plaintext)
+    enc_file = open('set2/10.txt', 'r')
+    enc_text = bytearray(enc_file.read(), 'utf-8')
+    ciphertext = codecs.decode(enc_text, 'base64')
+    key = b'YELLOW SUBMARINE'
+    iv = b'\x00' * 16
+    plaintext = decrypt_aes_cbc(ciphertext, key, iv) 
+    print(plaintext.decode('utf-8'))
 
     # Check ecb encryption
     # dec_file = open('set2/lyrics.txt', 'r')
