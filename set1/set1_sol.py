@@ -32,13 +32,17 @@ letterFrequency = {'E' : 12.0,
 'J' : 0.10,
 'Z' : 0.07 }
 
-def hex_to_base64(hexstring):
+def hex_to_base64(hexstring: str) -> str:
+    if not isinstance(hexstring, str):
+        raise TypeError
     return codecs.encode(codecs.decode(hexstring, 'hex'), 'base64').decode()
 
 def base64_to_hex(base64string):
     return base64.b64decode(base64string).hex()
 
-def xor_bytes(bytes1, bytes2):
+def xor_bytes(bytes1: bytes, bytes2: bytes) -> bytes:
+    if not isinstance(bytes1, bytes) or not isinstance(bytes2, bytes):
+        raise TypeError
     if len(bytes1) != len(bytes2):
         raise Exception('Chunks must have the same length')
     xored = bytearray(bytes1)
@@ -53,7 +57,9 @@ def xor_hex(hexstring1, hexstring2):
     hex2 = int(hexstring2, 16)
     return '{:x}'.format(hex1 ^ hex2)
 
-def single_byte_xor(ciphertext, threshold, get_key = False):
+def single_byte_xor(ciphertext: bytes, threshold: int, get_key = False) -> bytes:
+    if not isinstance(ciphertext, bytes) or not isinstance(threshold, int):
+        raise TypeError
     dictionary = enchant.Dict("en_US")
     string_scores = {}
     for i in range(256):
@@ -83,7 +89,9 @@ def single_byte_xor(ciphertext, threshold, get_key = False):
     final_list = '\n'.join(("[score: " + str(string_scores[sentence]) + "] " + sentence) for sentence in sorted_scores)
     return final_list
 
-def find_xored_single_byte(lines, threshold):
+def find_xored_single_byte(lines: list, threshold: int) -> bytes:
+    if not isinstance(lines, list) or not isinstance(threshold, int):
+        raise TypeError
     all_sentences = ""
     for line in lines:
         line_sentences = single_byte_xor(bytes.fromhex(line), threshold)
@@ -91,7 +99,9 @@ def find_xored_single_byte(lines, threshold):
             all_sentences += line_sentences 
     return all_sentences
 
-def encrypt_repeating_xor(plaintext, key):
+def encrypt_repeating_xor(plaintext: bytes, key: bytes):
+    if not isinstance(plaintext, bytes) or not isinstance(key, bytes):
+        raise TypeError
     length = len(plaintext)
     repeats = length // len(key)
     excess = length % len(key)
@@ -103,7 +113,9 @@ def encrypt_repeating_xor(plaintext, key):
         ciphertext += bytes([plaintext_bytes[i] ^ keystream_bytes[i]])
     return ciphertext
 
-def decrypt_repeating_xor(ciphertext_bytes, log_info=False):
+def decrypt_repeating_xor(ciphertext_bytes: bytes, log_info=False):
+    if not isinstance(ciphertext_bytes, bytes):
+        raise TypeError
     ciphertext = bytearray(ciphertext_bytes)
     min_dist = 100
     min_keysize = 100
@@ -127,13 +139,13 @@ def decrypt_repeating_xor(ciphertext_bytes, log_info=False):
     excess = len(ciphertext) % min_keysize
     for i in range(0,len(ciphertext) - excess, min_keysize):
         for j in range(min_keysize):
-            (blocks[j]).append(ciphertext[i+j])
+            blocks[j].append(ciphertext[i+j])
     for i in range(0, excess):
         blocks[i].append(ciphertext[-excess + i])
     key = []
     for i in range(min_keysize):
         block_str = ''.join(chr(c) for c in blocks[i])
-        block_bytes = bytearray(block_str, 'utf-8')
+        block_bytes = bytes(block_str, 'utf-8')
         key.append(single_byte_xor(block_bytes, 100, True))
     if log_info:
         key_text = ""
@@ -148,7 +160,7 @@ def decrypt_repeating_xor(ciphertext_bytes, log_info=False):
             plaintext += chr(ciphertext[-excess + i] ^ key[i])
     return plaintext 
 
-def hamming(str1, str2):
+def hamming(str1: bytes, str2: bytes):
     if len(str1) != len(str2):
         raise Exception('Strings must have the same length')
     binary1 = ''.join(format(c, '08b') for c in str1)
@@ -158,11 +170,15 @@ def hamming(str1, str2):
         dist += (c1!=c2)
     return dist
 
-def decrypt_aes_ecb(ciphertext, key):
+def decrypt_aes_ecb(ciphertext: bytes, key: bytes):
+    if not isinstance(ciphertext, bytes) or not isinstance(key, bytes):
+        raise TypeError
     cipher = AES.new(key, AES.MODE_ECB)
     return cipher.decrypt(ciphertext)
 
-def detect_aes_ecb(ciphertext_bytes):
+def detect_aes_ecb(ciphertext_bytes: bytes) -> bool:
+    if not isinstance(ciphertext_bytes, bytes):
+        raise TypeError
     ciphertext = ciphertext_bytes.decode('utf-8')
     block_list = []
     block_dict = {}
@@ -185,8 +201,8 @@ if __name__ == '__main__':
 
     # Challenge 7
     # enc_file = open('set1/7.txt', 'r')
-    # enc_text = bytearray(enc_file.read(), 'utf-8')
-    # ciphertext = bytearray(codecs.decode(enc_text, 'base64'))
+    # enc_text = bytes(enc_file.read(), 'utf-8')
+    # ciphertext = bytes(codecs.decode(enc_text, 'base64'))
     # key = b'YELLOW SUBMARINE'
     # plaintext = decrypt_aes_ecb(ciphertext, key).decode('utf-8')
     # print(plaintext)
