@@ -160,9 +160,10 @@ def hamming(str1, str2):
 
 def decrypt_aes_ecb(ciphertext, key):
     cipher = AES.new(key, AES.MODE_ECB)
-    return cipher.decrypt(ciphertext).decode('latin-1')
+    return cipher.decrypt(ciphertext)
 
-def detect_aes_ecb(ciphertext):
+def detect_aes_ecb(ciphertext_bytes):
+    ciphertext = ciphertext_bytes.decode('utf-8')
     block_list = []
     block_dict = {}
     for i in range(0, len(ciphertext), 32):
@@ -176,19 +177,19 @@ def detect_aes_ecb(ciphertext):
 
 if __name__ == '__main__':
     # Challenge 8
-    # enc_file = open('8.txt', 'r')
-    # lines = enc_file.read().splitlines()
-    # for line in lines:
-    #     if (detect_aes_ecb(line)):
-    #         print("Detected AES ECB: ", line)
+    enc_file = open('set1/8.txt', 'r')
+    lines = enc_file.read().splitlines()
+    for line in lines:
+        if (detect_aes_ecb(bytes(line,'utf-8'))):
+            print("Detected AES ECB: ", line)
 
     # Challenge 7
-    enc_file = open('set1/7.txt', 'r')
-    enc_text = bytearray(enc_file.read(), 'utf-8')
-    ciphertext = codecs.decode(enc_text, 'base64')
-    key = b'YELLOW SUBMARINE'
-    plaintext = decrypt_aes_ecb(ciphertext, key) 
-    print(plaintext)
+    # enc_file = open('set1/7.txt', 'r')
+    # enc_text = bytearray(enc_file.read(), 'utf-8')
+    # ciphertext = bytearray(codecs.decode(enc_text, 'base64'))
+    # key = b'YELLOW SUBMARINE'
+    # plaintext = decrypt_aes_ecb(ciphertext, key).decode('utf-8')
+    # print(plaintext)
 
     # Challenge 6
     # enc_file = open('set1/6.txt', 'r')
