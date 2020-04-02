@@ -86,11 +86,11 @@ def detect_mode(ciphertext_base64: bytes) -> str:
     else:
         return 'CBC'
 
-def ecb_oracle(plaintext: bytes, key: bytes) -> bytes:
+def ecb_oracle(plaintext: bytes, key: bytes, prefix: bytes = b'') -> bytes:
     if not isinstance(plaintext, bytes) or not isinstance(key, bytes):
         raise TypeError
     unknown_str = base64.b64decode('Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK')
-    plaintext = plaintext + unknown_str
+    plaintext = prefix + plaintext + unknown_str
     plaintext =  pkcs7_pad(plaintext, 16)
     ciphertext = b''
     ciphertext = encrypt_aes_ecb(plaintext, key)
@@ -121,28 +121,46 @@ def detect_block_size(key: bytes, encryption_function: Callable) -> int:
             prev_cipher_len = cipher_len
             plaintext += b'A'
 
-def ecb_decrypt_byte_at_a_time(key: bytes, encryption_function: Callable) -> bytes:
-    if not isinstance(key, bytes) or not isinstance(encryption_function, Callable):
+def ecb_decrypt_byte_at_a_time(key: bytes, encryption_function: Callable, prefix: bytes = b'') -> bytes:
+    if not isinstance(key, bytes) or not isinstance(encryption_function, Callable) or not isinstance(prefix, bytes):
         raise TypeError
     block_size = detect_block_size(key, encryption_function)
-    ciphertext = encryption_function(b'A' * 50, key)
+    ciphertext = encryption_function(b'A' * 50, key, prefix)
     ciphertext = codecs.encode(ciphertext, 'base64').decode('utf-8')
     mode = detect_mode(bytes(ciphertext, 'utf-8'))
     if mode != 'ECB':
         raise Exception('Can only decrypt ECB mode')
-    encrypted_secret = encryption_function(b'', key)
-    encrypted_secret_len = len(encrypted_secret)
+    if prefix == b'':
+        prepend = b''
+        plaintext_start = 0
+    else:
+        # If the encryption adds a prefix, find where the actual input starts by brute-forcing the size of the prefix
+        indicator = encrypt_aes_ecb(b'B' * block_size, key).decode('latin1') # Block full of B's
+        prepend = b'B'
+        indicator_pos = -1
+        # Keep encrypting until we find a block full of B's
+        while indicator_pos == -1:
+            encrypted_text = encryption_function(prepend, key, prefix) 
+            indicator_pos = encrypted_text.decode('latin-1').find(indicator)
+            prepend += b'B'
+        # Now we know the size of the random prefix, so from now on prepad the correct number of B's on the input in order to align the blocks and just ignore the first blocks up until the prefix (which contain the prefix + the B's)
+        prepend = prepend[:-1-block_size]
+        plaintext_start = indicator_pos
+    encrypted_secret_len = len(encryption_function(prepend, key, prefix).decode('latin-1')[plaintext_start:])
     total_blocks = encrypted_secret_len // block_size # Find out how many block the encrypted secret is by itself
     decrypted_text = b''
     target_position = (total_blocks - 1) * block_size # We will be decrypting the block where our input ends
-    pre_appended_input = target_position * b'A' + b'A' * (block_size - 1) # Append A's and decrease each time we reveal a character 
+    pre_appended_input = prepend + target_position * b'A' + b'A' * (block_size - 1) # Append A's and decrease each time we reveal a character 
     for curr_block in range(total_blocks):
         decrypted_block = b''
         for i in range(block_size):
-            target = encryption_function(pre_appended_input, key)[target_position:target_position+ 16] # The block we want to match
+            encrypted_text = encryption_function(pre_appended_input, key, prefix)[plaintext_start:]
+
+            target = encrypted_text[target_position:target_position+ 16] # The block we want to match
             for c in string.printable:
-                plaintext_pad = (target_position - (curr_block * 16)) * b'A' + b'A' * (block_size - 1 - i) + decrypted_text + decrypted_block + bytes(c, 'utf-8') # Same as target, except last character (brute force it)
-                output_block = encryption_function(plaintext_pad, key)[target_position:target_position+ 16]
+                plaintext_pad = prepend + (target_position - (curr_block * 16)) * b'A' + b'A' * (block_size - 1 - i) + decrypted_text + decrypted_block + bytes(c, 'utf-8') # Same as target, except last character (brute force it)
+                output = encryption_function(plaintext_pad, key, prefix)[plaintext_start:]
+                output_block = output[target_position:target_position+ 16]
                 if target == output_block: # Check if output matches target until we get the correct character
                     decrypted_block += bytes(c, 'utf-8')
                     break
@@ -200,13 +218,20 @@ def create_admin_account(key: bytes) -> bytes:
     attach = encrypt_aes_ecb(pkcs7_pad(email_suffix + target_bytes, block_size), key) # Create a new last block by encrypting the bytes we want to attach, along with the last part of the email
     encrypted_fake_profile += attach # Attach the last modified encrypted block
     return encrypted_fake_profile
-    
+
 if __name__ == '__main__':
-    # Challenge 13
+    # Challenge 14
     key = generate_random_bytes(16)
-    admin_acc = create_admin_account(key)
-    admin_acc_decrypted = decrypt_profile(admin_acc, key)
-    print(admin_acc_decrypted)
+    prefix_len = random.randint(5,30)
+    prefix = generate_random_bytes(prefix_len)
+    decrypted = ecb_decrypt_byte_at_a_time(key, ecb_oracle, prefix)
+    print(decrypted.decode('utf-8'))
+
+    # Challenge 13
+    # key = generate_random_bytes(16)
+    # admin_acc = create_admin_account(key)
+    # admin_acc_decrypted = decrypt_profile(admin_acc, key)
+    # print(admin_acc_decrypted)
 
     # Test profile functions
     # profile = profile_for(b'test@test.com&role=admin')
