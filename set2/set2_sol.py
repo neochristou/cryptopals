@@ -8,15 +8,19 @@ def pkcs7_pad(text_bytes: bytes, size: int) -> bytes:
     if not isinstance(text_bytes, bytes) or not isinstance(size, int):
         raise TypeError
     padding_size = size - (len(text_bytes) % size)
-    if padding_size % size == 0:
-        return text_bytes
     padding_bytes = (padding_size * chr(padding_size)).encode()
     return text_bytes + padding_bytes
+
+def pkcs7_pad_validate(text: bytes) -> bytes:
+    if not isinstance(text, bytes):
+        raise TypeError
+
 
 def encrypt_aes_ecb(plaintext: bytes, key: bytes) -> bytes:
     if not isinstance(plaintext, bytes) or not isinstance(key, bytes):
         raise TypeError
-    plaintext = pkcs7_pad(plaintext, 16)
+    if len(plaintext) % 16 != 0:
+        raise Exception('Data must be 16-byte aligned')
     cipher = AES.new(key, AES.MODE_ECB)
     return cipher.encrypt(plaintext)
 
@@ -193,6 +197,7 @@ def profile_for(email: bytes) -> bytes:
 def encrypt_profile(profile: bytes, key: bytes) -> bytes:
     if not isinstance(profile, bytes) or not isinstance (key, bytes):
         raise TypeError
+    profile = pkcs7_pad(profile, 16)
     return encrypt_aes_ecb(profile, key)
 
 def decrypt_profile(enc_profile: bytes, key: bytes) -> dict:
@@ -221,11 +226,11 @@ def create_admin_account(key: bytes) -> bytes:
 
 if __name__ == '__main__':
     # Challenge 14
-    key = generate_random_bytes(16)
-    prefix_len = random.randint(5,30)
-    prefix = generate_random_bytes(prefix_len)
-    decrypted = ecb_decrypt_byte_at_a_time(key, ecb_oracle, prefix)
-    print(decrypted.decode('utf-8'))
+    # key = generate_random_bytes(16)
+    # prefix_len = random.randint(5,30)
+    # prefix = generate_random_bytes(prefix_len)
+    # decrypted = ecb_decrypt_byte_at_a_time(key, ecb_oracle, prefix)
+    # print(decrypted.decode('utf-8'))
 
     # Challenge 13
     # key = generate_random_bytes(16)
@@ -280,5 +285,5 @@ if __name__ == '__main__':
     # print(ciphertext)
 
     # Challenge 9 
-    # padded_bytes = pkcs7_pad(b'YELLOW SUBMARINE', 20)
-    # print(padded_bytes)
+    # padded_bytes = pkcs7_pad(b'YELLOW SUBMARINE', 16)
+    # encrypt_aes_cbc(padded_bytes, generate_random_bytes(16), generate_random_bytes(16))
