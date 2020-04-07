@@ -14,7 +14,12 @@ def pkcs7_pad(text_bytes: bytes, size: int) -> bytes:
 def pkcs7_pad_validate(text: bytes) -> bytes:
     if not isinstance(text, bytes):
         raise TypeError
-
+    padding_byte = text[-1]
+    for i in range(padding_byte):
+        if text[-1] != padding_byte:
+            raise Exception('Incorrect PKCS7 padding')
+        text = text[:-1]
+    return text
 
 def encrypt_aes_ecb(plaintext: bytes, key: bytes) -> bytes:
     if not isinstance(plaintext, bytes) or not isinstance(key, bytes):
@@ -224,7 +229,62 @@ def create_admin_account(key: bytes) -> bytes:
     encrypted_fake_profile += attach # Attach the last modified encrypted block
     return encrypted_fake_profile
 
+def encrypt_userdata(userdata: bytes, key:bytes, iv: bytes) -> bytes:
+    if not isinstance(userdata, bytes) or not isinstance(key, bytes) or not isinstance(iv, bytes):
+        raise TypeError
+    prepend = "comment1=cooking%20MCs;userdata="
+    append = ";comment2=%20like%20a%20pound%20of%20bacon"
+    badchars = [';', '=']
+    userdata = userdata.decode('utf-8')
+    for c in badchars:
+        if c in userdata:
+            userdata = userdata[:userdata.index(c)]
+    data = pkcs7_pad(bytes(prepend + userdata + append, 'utf-8'), 16)
+    return encrypt_aes_cbc(data, key, iv)
+
+def decrypt_userdata(encrypted: bytes, key: bytes, iv: bytes) -> bool:
+    if not isinstance(encrypted, bytes) or not isinstance(key, bytes) or not isinstance(iv, bytes):
+        raise TypeError
+    decr = decrypt_aes_cbc(encrypted, key, iv)
+    decrypted_data = pkcs7_pad_validate(decr).decode('latin-1')
+    data = decrypted_data.split(';')
+    for param in data:
+        if 'admin' in param:
+            split = param.split('=')
+            if split[1] == 'true':
+                return True
+    return False
+
+def cbc_bit_flip(ciphertext: bytes, target: bytes):
+    if not isinstance(ciphertext, bytes) or not isinstance(target, bytes):
+        raise TypeError
+    prepend = "comment1=cooking%20MCs;userdata="
+    block_size = 16
+    target = pkcs7_pad(target, block_size) # Pad target bytes so we can xor it
+    target = xor_bytes(bytes(prepend[block_size:2 * block_size], 'utf-8'), target) # Xor target bytes with the starting bytes of the second block. This way, when we this change gets propagated to the second block, the two xors will cancel each other out and the plaintext will contain our target bytes
+    target_len = len(target)
+    xored = xor_bytes(target, ciphertext[:target_len]) # Xor our crafted block with the first block of the ciphertext. It will mess up the first block of plaintext, but the second block will contain the target bytes
+    ciphertext = xored + ciphertext[target_len:] # Replace the first ciphertext block with the crafted block
+    return ciphertext
+
 if __name__ == '__main__':
+    # Challenge 16
+    key = generate_random_bytes(16)
+    iv = generate_random_bytes(16)
+    userdata = b"test;admin=true"
+    encrypted = encrypt_userdata(userdata, key, iv) 
+    modified = cbc_bit_flip(encrypted, b';admin=true;')
+    decrypted_modified = decrypt_userdata(modified, key, iv)
+    print(decrypted_modified)
+
+    # Challenge 15
+    # unpadded = pkcs7_pad_validate(b"ICE ICE BABY\x04\x04\x04\x04")
+    # print(unpadded)
+    # unpadded = pkcs7_pad_validate(b"ICE ICE BABY\x05\x05\x05\x05")
+    # print(unpadded)
+    # unpadded = pkcs7_pad_validate(b"ICE ICE BABY\x01\x02\x03\x04")
+    # print(unpadded)
+
     # Challenge 14
     # key = generate_random_bytes(16)
     # prefix_len = random.randint(5,30)
