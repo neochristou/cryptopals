@@ -3,6 +3,7 @@ from set1.set1_sol import *
 from set2.set2_sol import * 
 import random, string, struct, operator
 from typing import Callable
+from spellchecker import SpellChecker
 
 key = generate_random_bytes(16)
 
@@ -179,7 +180,20 @@ def decrypt_same_nonce_ctr(ciphertexts: list) -> list:
         best[i] = max(score.items(), key=operator.itemgetter(1))[0]
     for i, ct in enumerate(ciphertexts):
         for pos, c in enumerate(ct):
-            plaintexts[i] += bytes(chr((c ^ best[pos])), 'utf-8')
+            decrypted_char = chr((c ^ best[pos])).lower()
+            if decrypted_char < hex(0xc0):
+                decrypted_char = '\x20'
+            plaintexts[i] += bytes(decrypted_char, 'utf-8')
+    # spellchecker = SpellChecker()
+    # for i, plaintext in enumerate(plaintexts):
+    #     plaintext = plaintext.decode('utf-8')
+    #     spellchecked_pt = ''
+    #     for word in plaintext.split(' '):
+    #         new_word = word
+    #         if len(word) > 1:
+    #             new_word = spellchecker.correction(word) + ' '
+    #         spellchecked_pt += new_word
+    #     plaintexts[i] = bytes(spellchecked_pt, 'utf-8')
     return plaintexts
 
 if __name__ == '__main__':
@@ -187,7 +201,7 @@ if __name__ == '__main__':
     ciphertexts = encrypt_same_nonce_ctr()
     plaintexts = decrypt_same_nonce_ctr(ciphertexts)
     for plaintext in plaintexts:
-        print(str(plaintext))
+        print(plaintext)
 
     # Challenge 18
     # key = b'YELLOW SUBMARINE'
