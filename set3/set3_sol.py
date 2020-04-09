@@ -18,7 +18,7 @@ b'MDAwMDA3SSdtIG9uIGEgcm9sbCwgaXQncyB0aW1lIHRvIGdvIHNvbG8=',
 b'MDAwMDA4b2xsaW4nIGluIG15IGZpdmUgcG9pbnQgb2g=',
 b'MDAwMDA5aXRoIG15IHJhZy10b3AgZG93biBzbyBteSBoYWlyIGNhbiBibG93' ]
 
-plaintexts = [
+plaintexts19 = [
 b'SSBoYXZlIG1ldCB0aGVtIGF0IGNsb3NlIG9mIGRheQ==',
 b'Q29taW5nIHdpdGggdml2aWQgZmFjZXM=',
 b'RnJvbSBjb3VudGVyIG9yIGRlc2sgYW1vbmcgZ3JleQ==',
@@ -149,7 +149,9 @@ def encrypt_aes_ctr(plaintext: bytes, key: bytes, nonce: bytes):
         encrypted += xor_bytes(to_encrypt, keystream_block[:excess])
     return encrypted
 
-def encrypt_same_nonce_ctr() -> list:
+def encrypt_same_nonce_ctr(plaintexts: list) -> list:
+    if not isinstance(plaintexts, list):
+        raise TypeError
     nonce = b'\x00' * 8
     ciphertexts = []
     for plaintext in plaintexts:
@@ -197,11 +199,19 @@ def decrypt_same_nonce_ctr(ciphertexts: list) -> list:
     return plaintexts
 
 if __name__ == '__main__':
-    # Challenge 19
-    ciphertexts = encrypt_same_nonce_ctr()
+    # Challenge 20
+    pt_file = open('set3/20.txt', 'r') 
+    plaintexts = pt_file.read().splitlines()
+    ciphertexts = encrypt_same_nonce_ctr(plaintexts)
     plaintexts = decrypt_same_nonce_ctr(ciphertexts)
     for plaintext in plaintexts:
         print(plaintext)
+
+    # Challenge 19
+    # ciphertexts = encrypt_same_nonce_ctr(plaintexts19)
+    # plaintexts = decrypt_same_nonce_ctr(ciphertexts)
+    # for plaintext in plaintexts:
+    #     print(plaintext)
 
     # Challenge 18
     # key = b'YELLOW SUBMARINE'
