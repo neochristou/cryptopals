@@ -14,8 +14,11 @@ def pkcs7_pad(text_bytes: bytes, size: int) -> bytes:
 def pkcs7_pad_validate(text: bytes) -> bytes:
     if not isinstance(text, bytes):
         raise TypeError
+    block_size = 16
     padding_byte = text[-1]
-    for i in range(padding_byte):
+    if padding_byte > block_size or padding_byte == 0:
+        raise Exception('Incorrect PKCS7 padding')
+    for _ in range(padding_byte):
         if text[-1] != padding_byte:
             raise Exception('Incorrect PKCS7 padding')
         text = text[:-1]
@@ -260,7 +263,7 @@ def cbc_bit_flip(ciphertext: bytes, target: bytes):
         raise TypeError
     prepend = "comment1=cooking%20MCs;userdata="
     block_size = 16
-    target = pkcs7_pad(target, block_size) # Pad target bytes so we can xor it
+    target = pkcs7_pad(target, block_size) # Pad target bytes so we can xor it (didn't need to do it with pkcs7)
     target = xor_bytes(bytes(prepend[block_size:2 * block_size], 'utf-8'), target) # Xor target bytes with the starting bytes of the second block. This way, when we this change gets propagated to the second block, the two xors will cancel each other out and the plaintext will contain our target bytes
     target_len = len(target)
     xored = xor_bytes(target, ciphertext[:target_len]) # Xor our crafted block with the first block of the ciphertext. It will mess up the first block of plaintext, but the second block will contain the target bytes
@@ -280,17 +283,19 @@ if __name__ == '__main__':
     # Challenge 15
     # unpadded = pkcs7_pad_validate(b"ICE ICE BABY\x04\x04\x04\x04")
     # print(unpadded)
+    # unpadded = pkcs7_pad_validate(b"ICE ICE BABYAAAA\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11")
+    # print(unpadded)
     # unpadded = pkcs7_pad_validate(b"ICE ICE BABY\x05\x05\x05\x05")
     # print(unpadded)
     # unpadded = pkcs7_pad_validate(b"ICE ICE BABY\x01\x02\x03\x04")
     # print(unpadded)
 
     # Challenge 14
-    # key = generate_random_bytes(16)
-    # prefix_len = random.randint(5,30)
-    # prefix = generate_random_bytes(prefix_len)
-    # decrypted = ecb_decrypt_byte_at_a_time(key, ecb_oracle, prefix)
-    # print(decrypted.decode('utf-8'))
+    key = generate_random_bytes(16)
+    prefix_len = random.randint(5,30)
+    prefix = generate_random_bytes(prefix_len)
+    decrypted = ecb_decrypt_byte_at_a_time(key, ecb_oracle, prefix)
+    print(decrypted.decode('utf-8'))
 
     # Challenge 13
     # key = generate_random_bytes(16)

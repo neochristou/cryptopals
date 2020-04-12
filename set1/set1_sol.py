@@ -176,14 +176,13 @@ def decrypt_aes_ecb(ciphertext: bytes, key: bytes):
     cipher = AES.new(key, AES.MODE_ECB)
     return cipher.decrypt(ciphertext)
 
-def detect_aes_ecb(ciphertext_bytes: bytes) -> bool:
-    if not isinstance(ciphertext_bytes, bytes):
+def detect_aes_ecb(ciphertext: bytes) -> bool:
+    if not isinstance(ciphertext, bytes):
         raise TypeError
-    ciphertext = ciphertext_bytes.decode('utf-8')
     block_list = []
     block_dict = {}
-    for i in range(0, len(ciphertext), 32):
-        block = ciphertext[i:i+32]
+    for i in range(0, len(ciphertext), 16):
+        block = ciphertext[i:i+16]
         block_list.append(block)
         block_dict[block] = None
     if len(block_list) == len(block_dict):
@@ -196,7 +195,8 @@ if __name__ == '__main__':
     enc_file = open('set1/8.txt', 'r')
     lines = enc_file.read().splitlines()
     for line in lines:
-        if (detect_aes_ecb(bytes(line,'utf-8'))):
+        ct = bytearray.fromhex(line) 
+        if (detect_aes_ecb(bytes(ct))):
             print("Detected AES ECB: ", line)
 
     # Challenge 7

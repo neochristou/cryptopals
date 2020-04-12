@@ -1,9 +1,11 @@
 #!/usr/bin/python3
 from set1.set1_sol import * 
 from set2.set2_sol import * 
+from set3.mt19937 import MT19937
 import random, string, struct, operator
 from typing import Callable
 from spellchecker import SpellChecker
+from numpy import random
 
 key = generate_random_bytes(16)
 
@@ -199,13 +201,20 @@ def decrypt_same_nonce_ctr(ciphertexts: list) -> list:
     return plaintexts
 
 if __name__ == '__main__':
+    # Challenge 21
+    rand = MT19937(123)
+    npr = random.RandomState(123)
+    for i in range(10):
+        if rand.extract_number() != npr.randint(2**32):
+            raise Exception('Wrong generated random number')
+
     # Challenge 20
-    pt_file = open('set3/20.txt', 'r') 
-    plaintexts = pt_file.read().splitlines()
-    ciphertexts = encrypt_same_nonce_ctr(plaintexts)
-    plaintexts = decrypt_same_nonce_ctr(ciphertexts)
-    for plaintext in plaintexts:
-        print(plaintext)
+    # pt_file = open('set3/20.txt', 'r') 
+    # plaintexts = pt_file.read().splitlines()
+    # ciphertexts = encrypt_same_nonce_ctr(plaintexts)
+    # plaintexts = decrypt_same_nonce_ctr(ciphertexts)
+    # for plaintext in plaintexts:
+    #     print(plaintext)
 
     # Challenge 19
     # ciphertexts = encrypt_same_nonce_ctr(plaintexts19)
